@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+            min-height: calc(100vh - 40px);
+            padding-bottom: 60px;
+        }
+
+        h2 {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 24px;
+            color: #1f1f1f;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #1f1f1f;
+        }
+
+        .path-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            height: 40px;
+        }
+
+        .path-label {
+            color: #666;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 14px;
+            user-select: none;
+        }
+
+        .info {
+            color: #666;
+            margin-top: 6px;
+            font-size: 13px;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 24px;
+            margin: 12px 0;
+            align-items: center;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .radio-option label {
+            margin: 0;
+            font-size: 14px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        input[type="radio"] {
+            margin: 0;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        input[type="text"] {
+            height: 36px;
+            padding: 0 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.15s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+
+        input[type="text"]::placeholder {
+            color: #999;
+        }
+
+        .buttons-container {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        button {
+            height: 36px;
+            padding: 0 16px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        button:hover {
+            background: #1557b0;
+        }
+
+        #status {
+            margin-top: 16px;
+            font-size: 14px;
+            min-height: 20px;
+        }
+
+        .custom-path-link {
+            position: relative;
+            margin-top: 8px;
+            width: 100%;
+            text-align: right;
+            color: #1a73e8;
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .custom-path-link:hover {
+            color: #1557b0;
+        }
+
+        #otherPathGroup input[type="text"] {
+            width: 100%;
+        }
+
+        .username-input {
+            width: 140px;
+        }
+
+        .folder-input {
+            width: 160px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>GIF Manager Settings</h2>
+
+        <div class="form-group">
+            <label>Select your operating system</label>
+            <div class="radio-group">
+                <div class="radio-option">
+                    <input type="radio" id="macos" name="os" value="macos">
+                    <label for="macos">macOS</label>
+                </div>
+                <div class="radio-option">
+                    <input type="radio" id="windows" name="os" value="windows">
+                    <label for="windows">Windows</label>
+                </div>
+                <div class="radio-option">
+                    <input type="radio" id="other" name="os" value="other">
+                    <label for="other">Other</label>
+                </div>
+            </div>
+        </div>
+
+        <div id="macosPathGroup" class="form-group" style="display: none;">
+            <label>Download Path</label>
+            <div class="path-input-group">
+                <span class="path-label">/Users/</span>
+                <input type="text" id="macUsername" class="username-input" placeholder="username">
+                <span class="path-label">/Downloads/</span>
+                <input type="text" id="macFolderName" class="folder-input" placeholder="folder-name" value="GIFManager">
+            </div>
+            <div class="custom-path-link" id="customPathLink-mac">set custom path</div>
+        </div>
+
+        <div id="windowsPathGroup" class="form-group" style="display: none;">
+            <label>Download Path</label>
+            <div class="path-input-group">
+                <span class="path-label">C:\Users\</span>
+                <input type="text" id="winUsername" class="username-input" placeholder="username">
+                <span class="path-label">\Downloads\</span>
+                <input type="text" id="winFolderName" class="folder-input" placeholder="folder-name" value="GIFManager">
+            </div>
+            <div class="custom-path-link" id="customPathLink-win">set custom path</div>
+        </div>
+
+        <div id="otherPathGroup" class="form-group" style="display: none;">
+            <label>Custom Download Path</label>
+            <input type="text" id="customPath" placeholder="Enter full path"
+                value="/please/enter/an/absolute/path/here/GIFManager">
+            <div class="info">Enter the complete path where you want to save your GIFs</div>
+        </div>
+
+        <div class="buttons-container">
+            <button id="saveSettings">Save Settings</button>
+        </div>
+
+        <div id="status"></div>
+    </div>
+
+    <script src="settings.js"></script>
+</body>
+
+</html>
