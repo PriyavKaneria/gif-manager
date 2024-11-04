@@ -29,6 +29,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     saveGif(info.srcUrl, shouldFavorite);
 });
 
+// Save GIF to storage individually for optmiized performance
 async function saveGif(url, shouldFavorite) {
     try {
         const response = await fetch(url);
@@ -36,35 +37,35 @@ async function saveGif(url, shouldFavorite) {
         const gifId = Date.now().toString();
         const arrayBuffer = await blob.arrayBuffer();
 
-        // Save to local storage
         const gifData = {
             id: gifId,
             binary: Array.from(new Uint8Array(arrayBuffer)),
             timestamp: Date.now()
         };
 
-        // Get download path
-        chrome.storage.local.get(['downloadPath', 'gifs', 'favorites', 'downloadSetting'], async ({ downloadPath = 'GIFManager', gifs = [], favorites = [], downloadSetting = "no" }) => {
-            // Update storage
-            const newGifs = [...gifs, gifData];
-            const newFavorites = shouldFavorite ? [...favorites, gifId] : favorites;
+        // Save each GIF with a unique key
+        chrome.storage.local.set({ [`gif_${gifId}`]: gifData }, () => {
+            if (shouldFavorite) {
+                chrome.storage.local.get('favorites', ({ favorites = [] }) => {
+                    chrome.storage.local.set({ favorites: [...favorites, gifId] });
+                });
+            }
 
-            chrome.storage.local.set({
-                gifs: newGifs,
-                favorites: newFavorites
-            }, () => {
-                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                        action: 'showNotification',
-                        message: `GIF ${shouldFavorite ? 'copied and favorited' : 'copied'} successfully!`
-                    });
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                chrome.tabs.sendMessage(tabs[0].id, {
+                    action: 'showNotification',
+                    message: `GIF ${shouldFavorite ? 'copied and favorited' : 'copied'} successfully!`
                 });
             });
+        });
 
-            // Save file to downloads if download setting is yes
+        chrome.storage.local.get(['gifs', 'downloadPath', 'downloadSetting'], async ({ gifs = [], downloadPath = 'GIFManager', downloadSetting = "no" }) => {
+            // Append the new GIF to the id list
+            chrome.storage.local.set({ gifs: [...gifs, gifId] });
+
+            // Save to downloads if required
             const toDownload = downloadSetting === "yes";
             if (toDownload) {
-                // Note: We can't directly access the file system, so we save to subfolder in default download path
                 const filename = `${downloadPath}/gif_${gifId}.gif`;
                 await chrome.downloads.download({
                     url: await createObjectURL(blob),
@@ -72,8 +73,8 @@ async function saveGif(url, shouldFavorite) {
                     saveAs: false
                 });
             }
-
         });
+
     } catch (error) {
         console.error('Error saving GIF:', error);
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

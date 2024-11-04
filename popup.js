@@ -20,112 +20,18 @@ function setupTabs() {
 }
 
 async function loadGifs() {
-    chrome.storage.local.get(['gifs', 'favorites', 'downloadPath', 'downloadSetting'], async ({ gifs = [], favorites = [], downloadPath = 'GIFManager', downloadSetting = "no" }) => {
-        const gifGrid = document.getElementById('gifGrid');
-        gifGrid.innerHTML = '';
-
-        const gifsToShow = currentTab === 'favorites'
-            ? gifs.filter(gif => favorites.includes(gif.id))
-            : gifs;
-
-        for (const gif of gifsToShow) {
-            const container = document.createElement('div');
-            container.className = 'gif-container template';
-
-            const img = document.createElement('img');
-            img.draggable = true;
-            img.dataset.gifId = gif.id;
-
-            const heart = document.createElement('div');
-            heart.className = `heart-icon ${favorites.includes(gif.id) ? 'active' : ''}`;
-            heart.innerHTML = favorites.includes(gif.id) ? heartIconSVGFilled : heartIconSVGOutline;
-            heart.onclick = () => toggleFavorite(gif.id);
-
-            const deleteIcon = document.createElement('div');
-            deleteIcon.className = 'delete-icon';
-            deleteIcon.innerHTML = deleteIconSVG;
-            deleteIcon.onclick = () => {
-                chrome.storage.local.set({
-                    gifs: gifs.filter(g => g.id !== gif.id),
-                    favorites: favorites.filter(id => id !== gif.id)
-                }, () => {
-                    loadGifs();
-                });
-            }
-
-            const overlay = document.createElement('div');
-            overlay.className = 'overlay';
-            overlay.style.position = 'absolute';
-            overlay.style.top = '0';
-            overlay.style.left = '0';
-            overlay.style.width = '100%';
-            overlay.style.height = '100%';
-            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-            overlay.style.display = 'flex';
-            overlay.style.alignItems = 'center';
-            overlay.style.justifyContent = 'center';
-            overlay.style.color = 'white';
-            overlay.style.fontSize = '14px';
-            overlay.style.fontWeight = 'bold';
-            overlay.style.opacity = '0';
-            overlay.style.transition = 'opacity 0.3s';
-            overlay.style.pointerEvents = 'none';
-            overlay.textContent = 'Click to add';
-
-            container.style.position = 'relative';
-            container.appendChild(overlay);
-
-            container.addEventListener('mouseenter', () => {
-                overlay.style.opacity = '1';
-            });
-
-            container.addEventListener('mouseleave', () => {
-                overlay.style.opacity = '0';
-            });
-
-            container.appendChild(img);
-            container.appendChild(heart);
-            container.appendChild(deleteIcon);
-            gifGrid.appendChild(container);
-
-            // Lazy load the GIF
-            const binaryData = gif.binary;
-            if (binaryData) {
-                try {
-                    const uint8Array = new Uint8Array(binaryData);
-                    const blob = new Blob([uint8Array], { type: 'image/gif' });
-                    const blobUrl = URL.createObjectURL(blob);
-                    img.alt = `GIF ${gif.id}`;
-                    img.dataset.src = blobUrl;
-                    container.dataset.blobUrl = blobUrl;
-
-                    const gifData = { id: gif.id, binary: new Uint8Array(binaryData) };
-                    img.addEventListener('click', () => {
-                        setupDragHandling(gifData);
-                    });
-                    img.addEventListener('dragstart', () => {
-                        setupDragHandling(gifData);
-                    });
-                } catch (error) {
-                    console.error('Error creating Blob URL:', error);
-                }
-            }
-        }
-
-        lazyLoadGIFs();
-    });
-}
-
-function lazyLoadGIFs() {
-    const lazyGifs = document.querySelectorAll('img[data-src]');
+    const gifGrid = document.getElementById('gifGrid');
+    gifGrid.innerHTML = '';
 
     const lazyLoad = (entries, observer) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 const img = entry.target;
+                // console.log('Lazy loading:', img);
                 img.src = img.getAttribute('data-src');
                 img.removeAttribute('data-src');
-                img.classList.remove('template');
+                img.parentElement.classList.remove('template');
+
                 observer.unobserve(img);
             }
         });
@@ -137,11 +43,107 @@ function lazyLoadGIFs() {
         threshold: 0
     });
 
-    lazyGifs.forEach(gif => {
-        observer.observe(gif);
-    });
+    const asyncLoadGifs = async (gifs, favorites = []) => {
+        // asynchronously get the gif data for each id
+        gifs.forEach(gifId => {
+            // console.log('Loading GIF:', gifId);
 
-    console.log(lazyGifs);
+            chrome.storage.local.get(`gif_${gifId}`, async (gifData) => {
+                const gif = gifData[`gif_${gifId}`];
+                // console.log('Loaded GIF:', gif.id);
+
+                const container = document.createElement('div');
+                container.className = 'gif-container template';
+
+                const img = document.createElement('img');
+                img.draggable = true;
+                img.dataset.gifId = gif.id;
+
+                const heart = document.createElement('div');
+                heart.className = `heart-icon ${favorites.includes(gif.id) ? 'active' : ''}`;
+                heart.innerHTML = favorites.includes(gif.id) ? heartIconSVGFilled : heartIconSVGOutline;
+                heart.onclick = () => toggleFavorite(gif.id);
+
+                const deleteIcon = document.createElement('div');
+                deleteIcon.className = 'delete-icon';
+                deleteIcon.innerHTML = deleteIconSVG;
+                deleteIcon.onclick = () => {
+                    chrome.storage.local.remove(`gif_${gif.id}`, () => {
+                        loadGifs();
+                    });
+                };
+
+                const overlay = document.createElement('div');
+                overlay.className = 'overlay';
+                overlay.style.position = 'absolute';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                overlay.style.display = 'flex';
+                overlay.style.alignItems = 'center';
+                overlay.style.justifyContent = 'center';
+                overlay.style.color = 'white';
+                overlay.style.fontSize = '14px';
+                overlay.style.fontWeight = 'bold';
+                overlay.style.opacity = '0';
+                overlay.style.transition = 'opacity 0.3s';
+                overlay.style.pointerEvents = 'none';
+                overlay.textContent = 'Click to add';
+
+                container.style.position = 'relative';
+                container.appendChild(overlay);
+                container.addEventListener('mouseenter', () => {
+                    overlay.style.opacity = '1';
+                });
+                container.addEventListener('mouseleave', () => {
+                    overlay.style.opacity = '0';
+                });
+
+                container.appendChild(img);
+                container.appendChild(heart);
+                container.appendChild(deleteIcon);
+                gifGrid.appendChild(container);
+
+                if (gif.binary) {
+                    try {
+                        const uint8Array = new Uint8Array(gif.binary);
+                        const blob = new Blob([uint8Array], { type: 'image/gif' });
+                        const blobUrl = URL.createObjectURL(blob);
+                        img.alt = `GIF ${gif.id}`;
+                        img.dataset.src = blobUrl;
+                        container.dataset.blobUrl = blobUrl;
+
+                        img.addEventListener('click', () => {
+                            setupDragHandling(gif);
+                        });
+                        img.addEventListener('dragstart', () => {
+                            setupDragHandling(gif);
+                        });
+
+                        // Lazy load the GIF
+                        observer.observe(img);
+                        // console.log('Observing:', img);
+
+                    } catch (error) {
+                        console.error('Error creating Blob URL:', error);
+                    }
+                }
+            });
+        });
+    };
+
+    // get the list of gif ids from storage
+    if (currentTab === 'favorites') {
+        chrome.storage.local.get('favorites', async ({ favorites = [] }) => {
+            asyncLoadGifs(favorites, favorites);
+        });
+    } else {
+        chrome.storage.local.get(['gifs', 'favourites'], async ({ gifs = [], favourites = [] }) => {
+            asyncLoadGifs(gifs, favourites);
+        });
+    }
 }
 
 function toggleFavorite(gifId) {
