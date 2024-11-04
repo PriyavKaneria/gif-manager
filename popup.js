@@ -20,7 +20,7 @@ function setupTabs() {
 }
 
 async function loadGifs() {
-    chrome.storage.local.get(['gifs', 'favorites', 'downloadPath'], async ({ gifs = [], favorites = [], downloadPath = 'GIFManager' }) => {
+    chrome.storage.local.get(['gifs', 'favorites', 'downloadPath', 'downloadSetting'], async ({ gifs = [], favorites = [], downloadPath = 'GIFManager', downloadSetting = "no" }) => {
         const gifGrid = document.getElementById('gifGrid');
         gifGrid.innerHTML = '';
 
@@ -33,10 +33,8 @@ async function loadGifs() {
                 let binaryData = gif.binary;
 
                 if (!binaryData) {
-                    // Try to load from downloaded file
-                    const filename = `${downloadPath}/gif_${gif.id}.gif`;
                     // Note: We can't directly access the file system
-                    // Instead, we'll need to use the downloads API to re-download it
+                    // Wanted to load binary data from storage but not possible
                     // This is a limitation of Chrome extensions
 
                     // For now, skip this GIF if binary data is not in storage
@@ -53,7 +51,7 @@ async function loadGifs() {
                 img.draggable = true;
 
                 container.dataset.blobUrl = img.src;
-                setupDragHandling(img, gif, downloadPath);
+                // setupDragHandling(img, gifData, downloadPath);
 
                 const heart = document.createElement('div');
                 heart.className = `heart-icon ${favorites.includes(gif.id) ? 'active' : ''}`;
@@ -71,6 +69,44 @@ async function loadGifs() {
                         loadGifs();
                     });
                 }
+
+                const overlay = document.createElement('div');
+                overlay.className = 'overlay';
+                overlay.style.position = 'absolute';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100%';
+                overlay.style.height = '100%';
+                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+                overlay.style.display = 'flex';
+                overlay.style.alignItems = 'center';
+                overlay.style.justifyContent = 'center';
+                overlay.style.color = 'white';
+                overlay.style.fontSize = '14px';
+                overlay.style.fontWeight = 'bold';
+                overlay.style.opacity = '0';
+                overlay.style.transition = 'opacity 0.3s';
+                overlay.style.pointerEvents = 'none';
+                overlay.textContent = 'Click to add';
+
+                const gifData = { id: gif.id, binary: uint8Array };
+                img.addEventListener('click', () => {
+                    setupDragHandling(gifData);
+                });
+                img.addEventListener('dragstart', () => {
+                    setupDragHandling(gifData);
+                });
+
+                container.style.position = 'relative';
+                container.appendChild(overlay);
+
+                container.addEventListener('mouseenter', () => {
+                    overlay.style.opacity = '1';
+                });
+
+                container.addEventListener('mouseleave', () => {
+                    overlay.style.opacity = '0';
+                });
 
                 container.appendChild(img);
                 container.appendChild(heart);
@@ -96,21 +132,86 @@ function toggleFavorite(gifId) {
     });
 }
 
-function setupDragHandling(img, gifData, downloadPath) {
-    img.addEventListener('dragstart', (e) => {
-        const filename = `gif_${gifData.id}.gif`;
-        const filePath = `${downloadPath}/${filename}`;
-        e.dataTransfer.clearData();
-        e.dataTransfer.effectAllowed = 'copy';
-        e.dataTransfer.dropEffect = 'copy';
-        e.dataTransfer.items.add(new File([new Blob([new Uint8Array(gifData.binary)], { type: 'image/gif' })], filename));
+// DRAG AND DROP
+// did not work because popup closes when drag ends outside and hence the event listener is removed
+function setupDragHandling(gifData) {
+    // Inject the content script if not already injected
+    if (!window.extensionDropHandler) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            const activeTab = tabs[0];
+            chrome.scripting.executeScript({
+                target: { tabId: activeTab.id },
+                files: ['pageScript.js']
+            });
+        });
+    }
 
-        console.log('Dragging:', filename, "Data:", e.dataTransfer.getData('image/gif'));
+    // Get the data and simulate the drop
+    // Execute in the active tab
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const activeTab = tabs[0];
+        chrome.scripting.executeScript({
+            target: { tabId: activeTab.id },
+            func: (dragData) => {
+                // Convert back to Uint8Array
+                dragData.binary = new Uint8Array(dragData.binary);
 
-        // Set drag image
-        e.dataTransfer.setDragImage(img, 0, 0);
+                window.extensionDropHandler.simulateFileDrop(dragData);
+            },
+            args: [{
+                id: gifData.id,
+                binary: Array.from(gifData.binary) // Convert to array for storage
+            }]
+        });
     });
 }
+
+// img.addEventListener('dragstart', (e) => {
+//     // Store the gif data in the extension's storage
+//     chrome.storage.local.set({
+//         currentDragData: {
+//             id: gifData.id,
+//             binary: Array.from(gifData.binary) // Convert to array for storage
+//         }
+//     });
+
+//     // Set the drag image
+//     e.dataTransfer.setDragImage(img, 0, 0);
+//     e.dataTransfer.effectAllowed = 'copy';
+
+//     // Inject the content script if not already injected
+//     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+//         const activeTab = tabs[0];
+//         chrome.scripting.executeScript({
+//             target: { tabId: activeTab.id },
+//             files: ['pageScript.js']
+//         });
+//     });
+// });
+
+// img.addEventListener('dragend', () => {
+//     // Get the stored data and simulate the drop
+//     chrome.storage.local.get(['currentDragData'], (result) => {
+//         if (result.currentDragData) {
+//             // Execute in the active tab
+//             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+//                 const activeTab = tabs[0];
+//                 chrome.scripting.executeScript({
+//                     target: { tabId: activeTab.id },
+//                     func: (dragData) => {
+//                         // Convert back to Uint8Array
+//                         dragData.binary = new Uint8Array(dragData.binary);
+//                         window.extensionDropHandler.simulateFileDrop(dragData);
+//                     },
+//                     args: [result.currentDragData]
+//                 });
+//             });
+
+//             // Clear the stored data
+//             chrome.storage.local.remove('currentDragData');
+//         }
+//     });
+// });
 
 // Clean up Blob URLs when popup closes
 window.addEventListener('unload', () => {

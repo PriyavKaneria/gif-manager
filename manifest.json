@@ -7,6 +7,7 @@
     "activeTab",
     "contextMenus",
     "notifications",
+    "scripting",
     "storage",
     "identity",
     "downloads",
@@ -35,8 +36,21 @@
       ]
     }
   ],
+  "web_accessible_resources": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "resources": [
+        "pageScript.js"
+      ]
+    }
+  ],
   "options_page": "settings.html",
   "background": {
     "service_worker": "background.js"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   }
 }

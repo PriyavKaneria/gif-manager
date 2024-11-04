@@ -167,51 +167,26 @@
     <div class="container">
         <h2>GIF Manager Settings</h2>
 
-        <div class="form-group">
-            <label>Select your operating system</label>
-            <div class="radio-group">
-                <div class="radio-option">
-                    <input type="radio" id="macos" name="os" value="macos">
-                    <label for="macos">macOS</label>
-                </div>
-                <div class="radio-option">
-                    <input type="radio" id="windows" name="os" value="windows">
-                    <label for="windows">Windows</label>
-                </div>
-                <div class="radio-option">
-                    <input type="radio" id="other" name="os" value="other">
-                    <label for="other">Other</label>
-                </div>
+        <div class="form-group"></div>
+        <label>Do you want to download GIFs to a local folder on copy?</label>
+        <div class="radio-group">
+            <div class="radio-option">
+                <input type="radio" id="downloadYes" name="download" value="yes">
+                <label for="downloadYes">Yes</label>
+            </div>
+            <div class="radio-option">
+                <input type="radio" id="downloadNo" name="download" value="no" checked>
+                <label for="downloadNo">No</label>
             </div>
         </div>
+        <div class="info">Due to API restrictions, only download to the default download path in a subfolder is possible
+            and GIFs won't be deleted automatically.</div>
 
-        <div id="macosPathGroup" class="form-group" style="display: none;">
-            <label>Download Path</label>
-            <div class="path-input-group">
-                <span class="path-label">/Users/</span>
-                <input type="text" id="macUsername" class="username-input" placeholder="username">
-                <span class="path-label">/Downloads/</span>
-                <input type="text" id="macFolderName" class="folder-input" placeholder="folder-name" value="GIFManager">
-            </div>
-            <div class="custom-path-link" id="customPathLink-mac">set custom path</div>
-        </div>
-
-        <div id="windowsPathGroup" class="form-group" style="display: none;">
-            <label>Download Path</label>
-            <div class="path-input-group">
-                <span class="path-label">C:\Users\</span>
-                <input type="text" id="winUsername" class="username-input" placeholder="username">
-                <span class="path-label">\Downloads\</span>
-                <input type="text" id="winFolderName" class="folder-input" placeholder="folder-name" value="GIFManager">
-            </div>
-            <div class="custom-path-link" id="customPathLink-win">set custom path</div>
-        </div>
-
-        <div id="otherPathGroup" class="form-group" style="display: none;">
-            <label>Custom Download Path</label>
-            <input type="text" id="customPath" placeholder="Enter full path"
-                value="/please/enter/an/absolute/path/here/GIFManager">
-            <div class="info">Enter the complete path where you want to save your GIFs</div>
+        <div class="form-group"></div>
+        <div class="form-group" id="path-form">
+            <label>Name of subfolder to download</label>
+            <input type="text" id="customPath" placeholder="Enter full path" value="GIFManager">
+            <div class="info">The subfolder should already exist in the default download path.</div>
         </div>
 
         <div class="buttons-container">
@@ -219,6 +194,7 @@
         </div>
 
         <div id="status"></div>
+    </div>
     </div>
 
     <script src="settings.js"></script>

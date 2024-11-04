@@ -44,15 +44,7 @@ async function saveGif(url, shouldFavorite) {
         };
 
         // Get download path
-        chrome.storage.local.get(['downloadPath', 'gifs', 'favorites'], async ({ downloadPath = 'GIFManager', gifs = [], favorites = [] }) => {
-            // Save file to downloads
-            const filename = `${downloadPath}/gif_${gifId}.gif`;
-            await chrome.downloads.download({
-                url: await createObjectURL(blob),
-                filename: filename,
-                saveAs: false
-            });
-
+        chrome.storage.local.get(['downloadPath', 'gifs', 'favorites', 'downloadSetting'], async ({ downloadPath = 'GIFManager', gifs = [], favorites = [], downloadSetting = "no" }) => {
             // Update storage
             const newGifs = [...gifs, gifData];
             const newFavorites = shouldFavorite ? [...favorites, gifId] : favorites;
@@ -68,6 +60,19 @@ async function saveGif(url, shouldFavorite) {
                     });
                 });
             });
+
+            // Save file to downloads if download setting is yes
+            const toDownload = downloadSetting === "yes";
+            if (toDownload) {
+                // Note: We can't directly access the file system, so we save to subfolder in default download path
+                const filename = `${downloadPath}/gif_${gifId}.gif`;
+                await chrome.downloads.download({
+                    url: await createObjectURL(blob),
+                    filename: filename,
+                    saveAs: false
+                });
+            }
+
         });
     } catch (error) {
         console.error('Error saving GIF:', error);
