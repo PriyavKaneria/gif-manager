@@ -4,10 +4,11 @@
 <head>
   <style>
     body {
-      width: 400px;
+      width: 420px;
       height: 500px;
       margin: 0;
       padding: 16px;
+      padding-right: 8px;
       font-family: Arial, sans-serif;
     }
 
@@ -28,6 +29,13 @@
       color: #1a73e8;
     }
 
+    .grid-container {
+      display: block;
+      overflow: scroll;
+      width: 105%;
+      height: 500px;
+    }
+
     .masonry-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -38,6 +46,11 @@
     .gif-container {
       position: relative;
       width: 100%;
+    }
+
+    .template {
+      width: 120px;
+      height: 120px;
     }
 
     .gif-container img {
@@ -82,7 +95,9 @@
     <button class="tab active" data-tab="all">All GIFs</button>
     <button class="tab" data-tab="favorites">Favorites</button>
   </div>
-  <div id="gifGrid" class="masonry-grid"></div>
+  <div id="scrollarea" class="grid-container">
+    <div id="gifGrid" class="masonry-grid"></div>
+  </div>
   <script src="popup.js"></script>
 </body>
 

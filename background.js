@@ -3,13 +3,13 @@ chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({
         id: "copyGif",
         title: "Copy GIF",
-        contexts: ["image"]
+        contexts: ["all"]
     });
 
     chrome.contextMenus.create({
         id: "copyGifAndFavorite",
         title: "Copy GIF and Favorite",
-        contexts: ["image"]
+        contexts: ["all"]
     });
 });
 

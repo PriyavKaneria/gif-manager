@@ -3,9 +3,9 @@ const heartIconSVGOutline = '<svg width="15" height="15" xmlns="http://www.w3.or
 const heartIconSVGFilled = '<svg width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path fill="#f72b2b" d="M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141C347 36.5 300.6 51.4 268 84L256 96 244 84c-32.6-32.6-79-47.5-124.6-39.9C50.5 55.6 0 115.2 0 185.1v5.8c0 41.5 17.2 81.2 47.6 109.5z"/></svg>';
 const deleteIconSVG = '<svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="15" height="15" viewBox="0 0 16 16"><path d="M 6.496094 1 C 5.675781 1 5 1.675781 5 2.496094 L 5 3 L 2 3 L 2 4 L 3 4 L 3 12.5 C 3 13.328125 3.671875 14 4.5 14 L 10.5 14 C 11.328125 14 12 13.328125 12 12.5 L 12 4 L 13 4 L 13 3 L 10 3 L 10 2.496094 C 10 1.675781 9.324219 1 8.503906 1 Z M 6.496094 2 L 8.503906 2 C 8.785156 2 9 2.214844 9 2.496094 L 9 3 L 6 3 L 6 2.496094 C 6 2.214844 6.214844 2 6.496094 2 Z M 5 5 L 6 5 L 6 12 L 5 12 Z M 7 5 L 8 5 L 8 12 L 7 12 Z M 9 5 L 10 5 L 10 12 L 9 12 Z"></path></svg>';
 
-document.addEventListener('DOMContentLoaded', () => {
-    loadGifs();
+document.addEventListener('DOMContentLoaded', async () => {
     setupTabs();
+    await loadGifs();
 });
 
 function setupTabs() {
@@ -29,96 +29,120 @@ async function loadGifs() {
             : gifs;
 
         for (const gif of gifsToShow) {
-            try {
-                let binaryData = gif.binary;
+            const container = document.createElement('div');
+            container.className = 'gif-container template';
 
-                if (!binaryData) {
-                    // Note: We can't directly access the file system
-                    // Wanted to load binary data from storage but not possible
-                    // This is a limitation of Chrome extensions
+            const img = document.createElement('img');
+            img.draggable = true;
+            img.dataset.gifId = gif.id;
 
-                    // For now, skip this GIF if binary data is not in storage
-                    continue;
-                }
+            const heart = document.createElement('div');
+            heart.className = `heart-icon ${favorites.includes(gif.id) ? 'active' : ''}`;
+            heart.innerHTML = favorites.includes(gif.id) ? heartIconSVGFilled : heartIconSVGOutline;
+            heart.onclick = () => toggleFavorite(gif.id);
 
-                const container = document.createElement('div');
-                container.className = 'gif-container';
+            const deleteIcon = document.createElement('div');
+            deleteIcon.className = 'delete-icon';
+            deleteIcon.innerHTML = deleteIconSVG;
+            deleteIcon.onclick = () => {
+                chrome.storage.local.set({
+                    gifs: gifs.filter(g => g.id !== gif.id),
+                    favorites: favorites.filter(id => id !== gif.id)
+                }, () => {
+                    loadGifs();
+                });
+            }
 
-                const img = document.createElement('img');
-                const uint8Array = new Uint8Array(binaryData);
-                const blob = new Blob([uint8Array], { type: 'image/gif' });
-                img.src = URL.createObjectURL(blob);
-                img.draggable = true;
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay';
+            overlay.style.position = 'absolute';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.color = 'white';
+            overlay.style.fontSize = '14px';
+            overlay.style.fontWeight = 'bold';
+            overlay.style.opacity = '0';
+            overlay.style.transition = 'opacity 0.3s';
+            overlay.style.pointerEvents = 'none';
+            overlay.textContent = 'Click to add';
 
-                container.dataset.blobUrl = img.src;
-                // setupDragHandling(img, gifData, downloadPath);
+            container.style.position = 'relative';
+            container.appendChild(overlay);
 
-                const heart = document.createElement('div');
-                heart.className = `heart-icon ${favorites.includes(gif.id) ? 'active' : ''}`;
-                heart.innerHTML = favorites.includes(gif.id) ? heartIconSVGFilled : heartIconSVGOutline;
-                heart.onclick = () => toggleFavorite(gif.id);
+            container.addEventListener('mouseenter', () => {
+                overlay.style.opacity = '1';
+            });
 
-                const deleteIcon = document.createElement('div');
-                deleteIcon.className = 'delete-icon';
-                deleteIcon.innerHTML = deleteIconSVG;
-                deleteIcon.onclick = () => {
-                    chrome.storage.local.set({
-                        gifs: gifs.filter(g => g.id !== gif.id),
-                        favorites: favorites.filter(id => id !== gif.id)
-                    }, () => {
-                        loadGifs();
-                    });
-                }
-
-                const overlay = document.createElement('div');
-                overlay.className = 'overlay';
-                overlay.style.position = 'absolute';
-                overlay.style.top = '0';
-                overlay.style.left = '0';
-                overlay.style.width = '100%';
-                overlay.style.height = '100%';
-                overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-                overlay.style.display = 'flex';
-                overlay.style.alignItems = 'center';
-                overlay.style.justifyContent = 'center';
-                overlay.style.color = 'white';
-                overlay.style.fontSize = '14px';
-                overlay.style.fontWeight = 'bold';
+            container.addEventListener('mouseleave', () => {
                 overlay.style.opacity = '0';
-                overlay.style.transition = 'opacity 0.3s';
-                overlay.style.pointerEvents = 'none';
-                overlay.textContent = 'Click to add';
+            });
 
-                const gifData = { id: gif.id, binary: uint8Array };
-                img.addEventListener('click', () => {
-                    setupDragHandling(gifData);
-                });
-                img.addEventListener('dragstart', () => {
-                    setupDragHandling(gifData);
-                });
+            container.appendChild(img);
+            container.appendChild(heart);
+            container.appendChild(deleteIcon);
+            gifGrid.appendChild(container);
 
-                container.style.position = 'relative';
-                container.appendChild(overlay);
+            // Lazy load the GIF
+            const binaryData = gif.binary;
+            if (binaryData) {
+                try {
+                    const uint8Array = new Uint8Array(binaryData);
+                    const blob = new Blob([uint8Array], { type: 'image/gif' });
+                    const blobUrl = URL.createObjectURL(blob);
+                    img.alt = `GIF ${gif.id}`;
+                    img.dataset.src = blobUrl;
+                    container.dataset.blobUrl = blobUrl;
 
-                container.addEventListener('mouseenter', () => {
-                    overlay.style.opacity = '1';
-                });
-
-                container.addEventListener('mouseleave', () => {
-                    overlay.style.opacity = '0';
-                });
-
-                container.appendChild(img);
-                container.appendChild(heart);
-                container.appendChild(deleteIcon);
-                gifGrid.appendChild(container);
-            } catch (error) {
-                console.error('Error loading GIF:', error);
+                    const gifData = { id: gif.id, binary: new Uint8Array(binaryData) };
+                    img.addEventListener('click', () => {
+                        setupDragHandling(gifData);
+                    });
+                    img.addEventListener('dragstart', () => {
+                        setupDragHandling(gifData);
+                    });
+                } catch (error) {
+                    console.error('Error creating Blob URL:', error);
+                }
             }
         }
+
+        lazyLoadGIFs();
     });
 }
 
+function lazyLoadGIFs() {
+    const lazyGifs = document.querySelectorAll('img[data-src]');
+
+    const lazyLoad = (entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.getAttribute('data-src');
+                img.removeAttribute('data-src');
+                img.classList.remove('template');
+                observer.unobserve(img);
+            }
+        });
+    };
+
+    const observer = new IntersectionObserver(lazyLoad, {
+        root: document.getElementById('scrollarea'),
+        rootMargin: '0px 0px 10px 0px',
+        threshold: 0
+    });
+
+    lazyGifs.forEach(gif => {
+        observer.observe(gif);
+    });
+
+    console.log(lazyGifs);
+}
 
 function toggleFavorite(gifId) {
     chrome.storage.local.get('favorites', ({ favorites = [] }) => {
