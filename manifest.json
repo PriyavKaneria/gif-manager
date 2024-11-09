@@ -6,13 +6,9 @@
   "permissions": [
     "activeTab",
     "contextMenus",
-    "notifications",
-    "scripting",
     "storage",
     "unlimitedStorage",
-    "identity",
-    "downloads",
-    "downloads.shelf"
+    "downloads"
   ],
   "action": {
     "default_popup": "popup.html",
