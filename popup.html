@@ -33,7 +33,7 @@
       display: block;
       overflow: scroll;
       width: 105%;
-      height: 500px;
+      height: 450px;
     }
 
     .masonry-grid {
@@ -85,6 +85,35 @@
       top: unset;
       bottom: 8px;
     }
+
+    #twitterGifAddress {
+      display: flex;
+      margin-bottom: 8px;
+    }
+
+    #twitterGif {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-right: 8px;
+    }
+
+    #addTwitterGif {
+      padding: 8px 16px;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #status {
+      margin-top: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      min-height: 20px;
+    }
   </style>
 </head>
 
@@ -93,9 +122,16 @@
     <button class="tab active" data-tab="all">All GIFs</button>
     <button class="tab" data-tab="favorites">Favorites</button>
   </div>
+  <!-- Input for taking twitter GIF address -->
+  <div id="twitterGifAddress">
+    <input type="text" id="twitterGif" placeholder="Enter Twitter GIF URL" />
+    <button id="addTwitterGif">Add</button>
+  </div>
+  <div id="status"></div>
   <div id="scrollarea" class="grid-container">
     <div id="gifGrid" class="masonry-grid"></div>
   </div>
+  <script src="gif.js"></script>
   <script src="popup.js"></script>
 </body>
 

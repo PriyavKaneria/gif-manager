@@ -5,7 +5,12 @@ const deleteIconSVG = '<svg xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" w
 
 document.addEventListener('DOMContentLoaded', async () => {
     setupTabs();
+    setupTwitterGIFInput();
     await loadGifs();
+
+    chrome.storage.local.get(null, (data) => {
+        console.log('All data:', data);
+    })
 });
 
 function setupTabs() {
@@ -16,6 +21,48 @@ function setupTabs() {
             currentTab = tab.dataset.tab;
             loadGifs();
         });
+    });
+}
+
+function showTwitterGIFStatus(success, msg) {
+    const twitterGIFInput = document.getElementById('twitterGif');
+    const status = document.getElementById('status');
+    const addBtn = document.getElementById('addTwitterGif');
+    if (success) {
+        status.style.color = 'green';
+        status.textContent = msg;
+        twitterGIFInput.value = '';
+    } else {
+        status.style.color = 'red';
+        status.textContent = 'Failed : ' + msg;
+    }
+    addBtn.disabled = false;
+    addBtn.textContent = 'Add';
+}
+
+function setupTwitterGIFInput() {
+    const twitterGIFInput = document.getElementById('twitterGif');
+    const addBtn = document.getElementById('addTwitterGif');
+    const status = document.getElementById('status');
+
+    addBtn.addEventListener('click', async () => {
+        const tweetUrl = twitterGIFInput.value.trim();
+        if (!tweetUrl) {
+            status.style.color = 'red';
+            status.textContent = 'Please enter a valid tweet URL';
+            return;
+        }
+        addBtn.disabled = true;
+        addBtn.textContent = 'Processing';
+
+
+
+        await convertTwitterVideoToGif(tweetUrl, (progress) => {
+            addBtn.textContent = `Processing (${Math.round(progress * 100)}%)`;
+        })
+            .catch((error) => {
+                console.error('Error converting Twitter video to GIF:', error);
+            });
     });
 }
 
@@ -45,11 +92,17 @@ async function loadGifs() {
 
     const asyncLoadGifs = async (gifs, favorites = []) => {
         // asynchronously get the gif data for each id
+        notFound = [];
         gifs.forEach(gifId => {
             // console.log('Loading GIF:', gifId);
 
             chrome.storage.local.get(`gif_${gifId}`, async (gifData) => {
                 const gif = gifData[`gif_${gifId}`];
+                if (!gif) {
+                    console.log('GIF not found:', gifId);
+                    notFound.push(gifId);
+                    return;
+                }
                 // console.log('Loaded GIF:', gif.id);
 
                 const container = document.createElement('div');
@@ -70,6 +123,12 @@ async function loadGifs() {
                 deleteIcon.onclick = () => {
                     chrome.storage.local.remove(`gif_${gif.id}`, () => {
                         loadGifs();
+                    });
+                    chrome.storage.local.get(['gifs', 'favorites'], ({ gifs = [], favorites = [] }) => {
+                        chrome.storage.local.set({
+                            gifs: gifs.filter(id => id !== gif.id),
+                            favorites: favorites.filter(id => id !== gif.id)
+                        });
                     });
                 };
 
@@ -132,6 +191,10 @@ async function loadGifs() {
                 }
             });
         });
+
+        if (notFound.length) {
+            chrome.storage.local.set({ gifs: gifs.filter(id => !notFound.includes(id)) });
+        }
     };
 
     // get the list of gif ids from storage
@@ -140,8 +203,8 @@ async function loadGifs() {
             asyncLoadGifs(favorites, favorites);
         });
     } else {
-        chrome.storage.local.get(['gifs', 'favourites'], async ({ gifs = [], favourites = [] }) => {
-            asyncLoadGifs(gifs, favourites);
+        chrome.storage.local.get(['gifs', 'favorites'], async ({ gifs = [], favorites = [] }) => {
+            asyncLoadGifs(gifs, favorites);
         });
     }
 }
@@ -161,83 +224,19 @@ function toggleFavorite(gifId) {
 // DRAG AND DROP
 // did not work because popup closes when drag ends outside and hence the event listener is removed
 function setupDragHandling(gifData) {
-    // Inject the content script if not already injected
-    if (!window.extensionDropHandler) {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            const activeTab = tabs[0];
-            chrome.scripting.executeScript({
-                target: { tabId: activeTab.id },
-                files: ['pageScript.js']
-            });
-        });
-    }
-
     // Get the data and simulate the drop
     // Execute in the active tab
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const activeTab = tabs[0];
-        chrome.scripting.executeScript({
-            target: { tabId: activeTab.id },
-            func: (dragData) => {
-                // Convert back to Uint8Array
-                dragData.binary = new Uint8Array(dragData.binary);
-
-                window.extensionDropHandler.simulateFileDrop(dragData);
-            },
-            args: [{
-                id: gifData.id,
-                binary: Array.from(gifData.binary) // Convert to array for storage
-            }]
-        });
+        chrome.tabs.sendMessage(
+            activeTab.id,
+            {
+                type: 'EXTENSION_DRAG_DROP_FILE',
+                gifData: gifData
+            }
+        );
     });
 }
-
-// img.addEventListener('dragstart', (e) => {
-//     // Store the gif data in the extension's storage
-//     chrome.storage.local.set({
-//         currentDragData: {
-//             id: gifData.id,
-//             binary: Array.from(gifData.binary) // Convert to array for storage
-//         }
-//     });
-
-//     // Set the drag image
-//     e.dataTransfer.setDragImage(img, 0, 0);
-//     e.dataTransfer.effectAllowed = 'copy';
-
-//     // Inject the content script if not already injected
-//     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-//         const activeTab = tabs[0];
-//         chrome.scripting.executeScript({
-//             target: { tabId: activeTab.id },
-//             files: ['pageScript.js']
-//         });
-//     });
-// });
-
-// img.addEventListener('dragend', () => {
-//     // Get the stored data and simulate the drop
-//     chrome.storage.local.get(['currentDragData'], (result) => {
-//         if (result.currentDragData) {
-//             // Execute in the active tab
-//             chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-//                 const activeTab = tabs[0];
-//                 chrome.scripting.executeScript({
-//                     target: { tabId: activeTab.id },
-//                     func: (dragData) => {
-//                         // Convert back to Uint8Array
-//                         dragData.binary = new Uint8Array(dragData.binary);
-//                         window.extensionDropHandler.simulateFileDrop(dragData);
-//                     },
-//                     args: [result.currentDragData]
-//                 });
-//             });
-
-//             // Clear the stored data
-//             chrome.storage.local.remove('currentDragData');
-//         }
-//     });
-// });
 
 // Clean up Blob URLs when popup closes
 window.addEventListener('unload', () => {
@@ -247,3 +246,127 @@ window.addEventListener('unload', () => {
         }
     });
 });
+
+async function convertTwitterVideoToGif(tweetUrl, onProgress) {
+    // Function to wait for video element with timeout and retries
+    try {
+        // check if activetab is on x.com
+        await chrome.tabs.query({ currentWindow: true, active: true }, async (tabs) => {
+            // console.log(tabs[0]);
+            if (!tabs[0].url) {
+                showTwitterGIFStatus(false, 'No active tab found');
+            }
+
+            // console.log(tabs[0].url.includes('x.com'));
+
+            if (!tabs[0].url.includes('x.com')) {
+                showTwitterGIFStatus(false, 'Please keep x.com tab in focus for GIF');
+            }
+
+            const videoUrl = await new Promise(async (resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject()
+                }, 4000);
+                chrome.tabs.sendMessage(tabs[0].id, {
+                    type: 'EXTENSION_GET_VIDEO',
+                    tweetURL: tweetUrl
+                }, (data) => {
+                    if (data.videoUrl) {
+                        clearTimeout(timeout);
+                        resolve(data.videoUrl);
+                    } else {
+                        reject();
+                    }
+                });
+            })
+
+            if (!videoUrl) {
+                showTwitterGIFStatus(false, 'No video found in tweet');
+            }
+
+            // Create a video element to load the video
+            const video = document.createElement('video');
+            video.crossOrigin = 'anonymous';
+            video.src = videoUrl;
+
+            // Wait for video metadata to load
+            await new Promise((resolve, reject) => {
+                video.onloadedmetadata = resolve;
+                video.onerror = reject;
+                video.load();
+            });
+
+            // Create a canvas to draw video frames
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d', {
+                willReadFrequently: true
+            });
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Initialize GIF encoder with more conservative settings
+            const gif = new GIF({
+                workers: 2,
+                quality: 10,
+                width: video.videoWidth,
+                height: video.videoHeight,
+                workerScript: 'gif.worker.js',
+                dither: false // Disable dithering for faster processing
+            });
+
+            // Process video frames with progress tracking
+            const frameCount = Math.min(Math.floor(video.duration * 10), 50); // Cap at 50 frames
+            const frameInterval = video.duration / frameCount;
+
+            for (let i = 0; i < frameCount; i++) {
+                video.currentTime = i * frameInterval;
+                await new Promise(resolve => {
+                    video.onseeked = () => {
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        gif.addFrame(ctx, {
+                            copy: true,
+                            delay: frameInterval * 1000,
+                            dispose: 1 // Use disposal method 1 for better optimization
+                        });
+                        // Emit progress if callback provided
+                        if (typeof onProgress === 'function') {
+                            onProgress((i + 1) / frameCount);
+                        }
+                        resolve();
+                    };
+                });
+            }
+
+            // Return promise that resolves with the gif blob
+            const gifData = await new Promise((resolve, reject) => {
+                gif.on('finished', blob => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsArrayBuffer(blob);
+                });
+                gif.render();
+            })
+
+            const gifId = Date.now().toString();
+            // Save the GIF data
+            chrome.storage.local.set({ [`gif_${gifId}`]: { id: gifId, binary: Array.from(new Uint8Array(gifData)), timestamp: Date.now() } }, () => {
+                chrome.storage.local.get('gifs', ({ gifs = [] }) => {
+                    chrome.storage.local.set({ gifs: [...gifs, gifId] }, () => {
+                        // if active tab is favorites add to favorites
+                        if (currentTab === 'favorites') {
+                            chrome.storage.local.get('favorites', ({ favorites = [] }) => {
+                                chrome.storage.local.set({ favorites: [...favorites, gifId] });
+                            });
+                        }
+                        loadGifs();
+                        showTwitterGIFStatus(true, 'GIF added successfully!')
+                    });
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Error fetching video URL:', error);
+        showTwitterGIFStatus(false, 'Could not find video element');
+    }
+}

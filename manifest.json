@@ -43,7 +43,7 @@
         "<all_urls>"
       ],
       "resources": [
-        "pageScript.js"
+        "gif.js"
       ]
     }
   ],

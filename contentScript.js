@@ -11,7 +11,7 @@ document.body.appendChild(notificationContainer);
 
 // Handle messages from background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-	console.log('Content script received message:', request);
+	// console.log('Content script received message:', request);
 
 	if (request.action === 'showNotification') {
 		showNotification(request.message);
@@ -59,10 +59,10 @@ document.head.appendChild(style);
 
 
 // Create a custom event handler for communication
-window.addEventListener('message', async (event) => {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 	// Verify the message is from our extension
-	if (event.data.type === 'EXTENSION_DRAG_DROP_FILE' && event.data.gifData) {
-		const { gifData } = event.data;
+	if (request.type === 'EXTENSION_DRAG_DROP_FILE' && request.gifData) {
+		const { gifData } = request;
 
 		// Create the File object
 		const file = new File(
@@ -121,14 +121,33 @@ window.addEventListener('message', async (event) => {
 
 		return;
 	}
+
+	else if (request.type == 'EXTENSION_GET_VIDEO' && request.tweetURL) {
+		// console.log('Get video from tweet:', request.tweetURL);
+
+		const tweetIdMatch = request.tweetURL.match(/status\/(\d+)/);
+		if (!tweetIdMatch) {
+			console.log('Invalid tweet URL');
+			return;
+		}
+		const tweetId = tweetIdMatch[1];
+		const tweetLink = document.querySelector(`a[href*="${tweetId}"]`);
+		if (!tweetLink) {
+			console.log('Tweet not found');
+			return;
+		}
+		let tweetElement = tweetLink.closest('article[data-testid="tweet"]');
+		if (!tweetElement) {
+			console.log('Tweet element not found');
+			return;
+		}
+		const videoElement = tweetElement.querySelector('video');
+		if (!videoElement) {
+			console.log('Video element not found');
+			return;
+		}
+
+		// Send the video URL back to the background script
+		sendResponse({ videoUrl: videoElement.src });
+	}
 });
-
-// Create a separate script file for page context
-const pageScript = document.createElement('script');
-pageScript.src = chrome.runtime.getURL('pageScript.js');
-(document.head || document.documentElement).appendChild(pageScript);
-
-// Clean up
-pageScript.onload = function () {
-	pageScript.remove();
-};
