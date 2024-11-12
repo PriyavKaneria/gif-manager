@@ -1,14 +1,18 @@
 # GIF Manager Chrome Extension
 
 <div align="center">
-  
-  ![image](https://github.com/user-attachments/assets/b5c08430-fa17-4c6d-81ac-467c0a62d60c)
+  <a href="https://chromewebstore.google.com/detail/gif-manager/ffcfibkmcfbknggllbckelfekndcmhdp" target="_blank">
+    <img src="https://github.com/user-attachments/assets/b5c08430-fa17-4c6d-81ac-467c0a62d60c" width="100%" />
+  </a>
 
   
   A powerful Chrome extension to manage and organize your favorite GIFs, featuring Twitter GIF integration.
   
   [Screenshots](#-screenshots) | [Installation](#-installation) | [Features](#-features) | [Usage](#-usage) | [Contributing](#-contributing)
 </div>
+
+## ⬇️ Add to browser now!
+- Chrome web store [link](https://github.com/user-attachments/assets/b5c08430-fa17-4c6d-81ac-467c0a62d60c)
 
 ## ✨ Features
 
@@ -45,7 +49,7 @@ https://github.com/user-attachments/assets/d4b9a0fb-caca-405d-b8cd-4146b716d1e0
 
 ## 🚀 Installation
 
-1. Visit the Chrome Web Store (link coming soon)
+1. Visit the Chrome Web Store [link](https://github.com/user-attachments/assets/b5c08430-fa17-4c6d-81ac-467c0a62d60c)
 2. Click "Add to Chrome"
 3. Click "Add Extension" when prompted
 4. The GIF Manager icon will appear in your Chrome toolbar
